@@ -1,0 +1,65 @@
+{
+  "name": "NOVA Agents — Submit Task via n8n (example)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nova-agent-task",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "incoming",
+      "name": "Task webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8765/api/tasks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Agent-Key",
+              "value": "={{$env.AGENT_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({project: $json.body.project, agent: $json.body.agent, prompt: $json.body.prompt, auto: $json.body.auto !== false}) }}",
+        "options": {}
+      },
+      "id": "submit",
+      "name": "Submit to Python API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        280
+      ]
+    }
+  ],
+  "connections": {
+    "Task webhook": {
+      "main": [
+        [
+          {
+            "node": "Submit to Python API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

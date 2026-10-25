@@ -1,0 +1,41 @@
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+
+# Python cache and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local runtime state
+agent_tasks.sqlite3
+agent_tasks.sqlite3-*
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Generated files created by the mock/Codex worker
+workspace/*/agent_output.txt
+workspace/*/.agent/
+
+# Local virtual environments and editor files
+.venv/
+venv/
+env/
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+# OS/package artifacts
+dist/
+build/
+*.egg-info/

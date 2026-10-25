@@ -1,0 +1,121 @@
+{
+  "name": "NOVA Agents — Task Completion Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "Every 2 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8765/api/tasks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Agent-Key",
+              "value": "={{$env.AGENT_API_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gettasks",
+      "name": "Fetch tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Notification workflow example only. Replace this with a persisted cursor/state before production.\nreturn $input.all().flatMap(item => (Array.isArray(item.json) ? item.json : [item.json])).filter(t => [\"completed\",\"failed\",\"cancelled\"].includes(t.status)).map(t => ({json:t}));"
+      },
+      "id": "filter",
+      "name": "Terminal tasks (demo)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TELEGRAM_NOTIFY_CHAT_ID}}",
+        "text": "=NOVA: #{{$json.id}} — {{$json.status}} ({{$json.agent}} / {{$json.project}})",
+        "additionalFields": {}
+      },
+      "id": "notify",
+      "name": "Telegram notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Choose Telegram credential"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 2 minutes": {
+      "main": [
+        [
+          {
+            "node": "Fetch tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch tasks": {
+      "main": [
+        [
+          {
+            "node": "Terminal tasks (demo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terminal tasks (demo)": {
+      "main": [
+        [
+          {
+            "node": "Telegram notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

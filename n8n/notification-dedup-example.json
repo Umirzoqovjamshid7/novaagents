@@ -1,0 +1,74 @@
+{
+  "name": "NOVA Agents - Completion Notification (cursor)",
+  "nodes": [
+    {
+      "parameters": {"rule": {"interval": [{"field": "minutes", "minutesInterval": 2}]}},
+      "id": "schedule",
+      "name": "Every 2 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {"jsCode": "const state = $getWorkflowStaticData('global');\nreturn [{ json: { cursor: Number(state.cursor || 0) } }];"},
+      "id": "cursor-read",
+      "name": "Read notification cursor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8765/api/tasks/terminal",
+        "sendQuery": true,
+        "queryParameters": {"parameters": [{"name": "after", "value": "={{$json.cursor}}"}]},
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "X-Agent-Key", "value": "={{$env.AGENT_API_KEY}}"}]},
+        "options": {}
+      },
+      "id": "fetch-terminal",
+      "name": "Fetch new terminal tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {"jsCode": "const payload = $json;\nconst items = Array.isArray(payload.items) ? payload.items : [];\nreturn items.map(task => ({ json: { ...task, notification_cursor: Number(payload.cursor || 0) } }));"},
+      "id": "expand",
+      "name": "Expand new tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TELEGRAM_NOTIFY_CHAT_ID}}",
+        "text": "=NOVA task #{{$json.id}}\nStatus: {{$json.status}}\nProject: {{$json.project}}\nAgent: {{$json.agent}}\n\n{{$json.result}}",
+        "additionalFields": {}
+      },
+      "id": "notify",
+      "name": "Telegram notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1180, 300],
+      "credentials": {"telegramApi": {"id": "REPLACE_ME", "name": "Choose Telegram credential"}}
+    },
+    {
+      "parameters": {"jsCode": "const state = $getWorkflowStaticData('global');\nconst cursors = $input.all().map(item => Number(item.json.notification_cursor || 0));\nif (cursors.length) state.cursor = Math.max(...cursors);\nreturn $input.all();"},
+      "id": "cursor-write",
+      "name": "Save notification cursor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1420, 300]
+    }
+  ],
+  "connections": {
+    "Every 2 minutes": {"main": [[{"node": "Read notification cursor", "type": "main", "index": 0}]]},
+    "Read notification cursor": {"main": [[{"node": "Fetch new terminal tasks", "type": "main", "index": 0}]]},
+    "Fetch new terminal tasks": {"main": [[{"node": "Expand new tasks", "type": "main", "index": 0}]]},
+    "Expand new tasks": {"main": [[{"node": "Telegram notification", "type": "main", "index": 0}]]},
+    "Telegram notification": {"main": [[{"node": "Save notification cursor", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "active": false
+}
